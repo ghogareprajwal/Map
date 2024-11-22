@@ -1,0 +1,48 @@
+/* Style for the dropdown button */
+.dropdown-btn {
+    background-color: #007bff;  /* Blue background */
+    color: white;               /* White text color */
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); /* Shadow effect */
+  }
+ 
+  /* The dropdown content (hidden by default) */
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    top: 40px;  /* Position the dropdown below the button */
+    right: 0;
+    background-color: #f9f9f9;
+    min-width: 200px;  /* Minimum width of the dropdown */
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    border-radius: 5px;
+  }
+ 
+  /* Show the dropdown when the button is clicked */
+  .dropdown-btn:hover + .dropdown-content,
+  .dropdown-content:hover {
+    display: block;
+  }
+ 
+  /* Style for each button inside the dropdown */
+  .dropdown-content button {
+    background-color: white;
+    color: #007bff;  /* Button text color */
+    padding: 10px;
+    width: 100%;  /* Make buttons take up the full width */
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+ 
+  /* Hover effect for dropdown buttons */
+  .dropdown-content button:hover {
+    background-color: #f1f1f1;
+  }
+ 
