@@ -9,3 +9,47 @@
        
     </div>
   </div>
+
+
+  <div class="table-container" *ngIf="tafTableData.length > 0">
+    <h3>TAF Data Table</h3>
+    <table class="table table-striped table-bordered">
+      <thead>
+        <tr>
+          <th>Sl No</th>
+          <th>Type</th>
+          <th>ICAO Code</th>
+          <th>Issue Time</th>
+          <th>Valid From [TAF]</th>
+          <th>Valid Until [TAF]</th>
+          <th>Valid From [Type Specific]</th>
+          <th>Valid Until [Type Specific]</th>
+          <th>Wind Direction</th>
+          <th>Wind Speed</th>
+          <th>Visibility</th>
+          <th>Weather Information</th>
+          <th>Cloud Information</th>
+          <th>Trend</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of tafTableData">
+          <td>{{ row['Sl no'] }}</td>
+          <td>{{ row.Type }}</td>
+          <td>{{ row['ICAO code'] }}</td>
+          <td>{{ row['Issue Time'] }}</td>
+          <td>{{ row['Valid From [TAF]'] }}</td>
+          <td>{{ row['Valid Until [TAF]'] }}</td>
+          <td>{{ row['Valid From [Type Specific]'] }}</td>
+          <td>{{ row['Valid Until [Type Specific]'] }}</td>
+          <td>{{ row['Wind Direction'] }}</td>
+          <td>{{ row['Wind Speed'] }}</td>
+          <td>{{ row.Visibility }}</td>
+          <td>{{ row['Weather Information'] }}</td>
+          <td>{{ row['Cloud Information'] }}</td>
+          <td>{{ row.Trend }}</td>
+        </tr>
+      </tbody>
+    </table>
+</div>
+ 

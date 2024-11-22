@@ -1,15 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import * as L from 'leaflet';
 import { WeatherService } from '../weather.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-map',
+  standalone: true,
+  imports: [CommonModule],
   templateUrl: './map.component.html',
   styleUrls: ['./map.component.scss'],
 })
 export class MapComponent implements OnInit {
-  private lat = 20.5937;
-  private lon = 78.9629;
+ 
   private markersSet = new Set<string>();
   private map: any;
   errorMessage: string = '';
@@ -17,7 +19,7 @@ export class MapComponent implements OnInit {
   private markers: L.Marker[] = []; // Array to store all markers
   isMetarDataVisible: boolean = false;
   isTafDataVisible: boolean = false;
-
+  tafTableData: any[] = [];
 
   constructor(private weatherService: WeatherService) { }
 
@@ -131,7 +133,7 @@ export class MapComponent implements OnInit {
       this.markersLayer.addTo(this.map);
     });
   }
-
+  
   fetchTafData(): void {
     const currentLat = this.map.getCenter().lat;
     const currentLon = this.map.getCenter().lng;
@@ -142,6 +144,7 @@ export class MapComponent implements OnInit {
         if (data && data.data) {
           console.log('Fetched TAFOR data:', data);
           this.displayTafDataOnMap(data);
+          this.processTafData(data.data);
         } else {
           console.error('No TAFOR data received');
         }
@@ -199,5 +202,170 @@ export class MapComponent implements OnInit {
     } else {
       console.error('No valid data found');
     }
+  }
+
+ 
+
+  processTafData(rawData: any[]): void {
+    this.tafTableData = []; // Clear previous data
+    rawData.forEach((station) => {
+      const rawText = station.raw_text; // Extract raw_text
+      const icaoCode = station.icao; // Extract ICAO code
+      const parsedData = this.parseTafData(rawText, icaoCode); // Parse the data
+      this.tafTableData.push(...parsedData); // Append parsed data to table
+    });
+  }
+  
+  // parseTafData(rawText: string, icao: string): any[] {
+  //   const rows: any[] = [];
+  //   let serialNo = 1;
+  
+  //   // Split the raw text based on trend indicators
+  //   const lines = rawText.split(/BECMG|TEMPO/);
+  //   const generalInfo = lines.shift()?.trim() || ""; // General TAF info
+  //   const trendTypes = rawText.match(/BECMG|TEMPO/g) || [];
+  
+  //   // Match general TAF data
+  //   const genMatch = generalInfo.match(
+  //     /TAF (\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([\w\d]+) (\d{4}) ([\w ]+)?/
+  //   );
+  //   if (genMatch) {
+  //     rows.push({
+  //       "Sl no": serialNo++,
+  //       Type: "GEN",
+  //       "ICAO code": genMatch[1],
+  //       "Issue Time": genMatch[2],
+  //       "Valid From [TAF]": genMatch[3],
+  //       "Valid Until [TAF]": genMatch[4],
+  //       "Valid From [Type Specific]": "",
+  //       "Valid Until [Type Specific]": "",
+  //       "Wind Direction": genMatch[5],
+  //       "Wind Speed": genMatch[6],
+  //       Visibility: "",
+  //       "Weather Information": genMatch[7] || "",
+  //       "Cloud Information": "",
+  //       Trend: "",
+  //     });
+  //   }
+  
+  //   // Process trend data
+  //   lines.forEach((line, index) => {
+  //     const trendType = trendTypes[index] || "";
+  //     const trendMatch = line
+  //       .trim()
+  //       .match(/(\d{4})\/(\d{4}) ([\w\d]+) (\d{4}) ([\w ]+)?/);
+  
+  //     if (trendMatch) {
+  //       rows.push({
+  //         "Sl no": serialNo++,
+  //         Type: trendType,
+  //         "ICAO code": icao,
+  //         "Issue Time": "",
+  //         "Valid From [TAF]": "",
+  //         "Valid Until [TAF]": "",
+  //         "Valid From [Type Specific]": trendMatch[1],
+  //         "Valid Until [Type Specific]": trendMatch[2],
+  //         "Wind Direction": trendMatch[3],
+  //         "Wind Speed": trendMatch[4],
+  //         Visibility: trendMatch[5] || "",
+  //         "Weather Information": "",
+  //         "Cloud Information": "",
+  //         Trend: trendType,
+  //       });
+  //     }
+  //   });
+  
+  //   return rows;
+  // }
+
+  parseTafData(rawText: string, icao: string): any[] {
+    const rows: any[] = [];
+    let serialNo = 1;
+  
+    // Split the raw text based on trend indicators like BECMG or TEMPO
+    const trendTypes = rawText.match(/BECMG|TEMPO/g) || [];
+    const lines = rawText.split(/BECMG|TEMPO/);
+  
+    // Get the general information (first part before any trends)
+    const generalInfo = lines.shift()?.trim() || "";
+  
+    // Match general TAF data
+    const genMatch = generalInfo.match(
+      /TAF (\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([\w\d]+) (\d{4}) ([\w ]+)?/
+    );
+  
+    // Add the general TAF information to rows
+    if (genMatch) {
+      const wind = genMatch[5]; // Wind data (e.g., "36005KT")
+      const windDirection = wind.slice(0, 3);  // Wind direction (e.g., "360")
+      const windSpeed = wind.slice(3);  // Wind speed (e.g., "05KT")
+  
+      // If visibility (like "3000") is found, handle it separately
+      let visibility = "";
+      let weatherInfo = genMatch[7] || "";
+  
+      if (genMatch[7] && /^\d{4}$/.test(genMatch[7])) {
+        visibility = genMatch[7];  // If it's a numeric value, treat it as visibility
+        weatherInfo = "HZ";  // Set weather info to HZ (haze)
+      }
+  
+      rows.push({
+        "Sl no": serialNo++,
+        Type: "GEN",
+        "ICAO code": genMatch[1],
+        "Issue Time": genMatch[2],
+        "Valid From [TAF]": genMatch[3],
+        "Valid Until [TAF]": genMatch[4],
+        "Valid From [Type Specific]": "",
+        "Valid Until [Type Specific]": "",
+        "Wind Direction": windDirection,
+        "Wind Speed": windSpeed,
+        Visibility: visibility,
+        "Weather Information": weatherInfo,
+        "Cloud Information": "",
+        Trend: "",
+      });
+    }
+  
+    // Process trend data like BECMG, TEMPO
+    lines.forEach((line, index) => {
+      const trendType = trendTypes[index] || "";
+      const trendMatch = line.trim().match(/(\d{4})\/(\d{4}) ([\w\d]+) (\d{4}) ([\w ]+)?/);
+  
+      if (trendMatch) {
+        // Parse the wind data (like "36005KT")
+        const wind = trendMatch[3];
+        const windDirection = wind.slice(0, 3);  // Wind direction (e.g., "360")
+        const windSpeed = wind.slice(3);  // Wind speed (e.g., "05KT")
+  
+        // If visibility (like "3000") is found, handle it
+        let visibility = "";
+        let weatherInfo = trendMatch[5] || "";
+  
+        if (trendMatch[5] && /^\d{4}$/.test(trendMatch[5])) {
+          visibility = trendMatch[5];  // If it's a numeric value, treat it as visibility
+          weatherInfo = "HZ";  // Set weather info to HZ (haze)
+        }
+  
+        rows.push({
+          "Sl no": serialNo++,
+          Type: trendType,
+          "ICAO code": icao,
+          "Issue Time": "",
+          "Valid From [TAF]": "",
+          "Valid Until [TAF]": "",
+          "Valid From [Type Specific]": trendMatch[1],
+          "Valid Until [Type Specific]": trendMatch[2],
+          "Wind Direction": windDirection,
+          "Wind Speed": windSpeed,
+          Visibility: visibility,
+          "Weather Information": weatherInfo,
+          "Cloud Information": "",
+          Trend: trendType,
+        });
+      }
+    });
+  
+    return rows;
   }
 }
