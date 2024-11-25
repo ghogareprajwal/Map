@@ -207,77 +207,27 @@ export class MapComponent implements OnInit {
  
 
   processTafData(rawData: any[]): void {
-    this.tafTableData = []; // Clear previous data
+    const newTableData: any[] = []; // Temporary array for new data
     rawData.forEach((station) => {
-      const rawText = station.raw_text; // Extract raw_text
-      const icaoCode = station.icao; // Extract ICAO code
-      const parsedData = this.parseTafData(rawText, icaoCode); // Parse the data
-      this.tafTableData.push(...parsedData); // Append parsed data to table
+      const rawText = station.raw_text; 
+      const icaoCode = station.icao; 
+      const parsedData = this.parseTafData(rawText, icaoCode); 
+      newTableData.push(...parsedData); 
     });
+  
+    // Merge the new data with existing table data, avoiding duplicates
+    const existingIcaoCodes = this.tafTableData.map((item) => item["ICAO code"]);
+    const mergedData = [...this.tafTableData];
+  
+    newTableData.forEach((newRow) => {
+      if (!existingIcaoCodes.includes(newRow["ICAO code"])) {
+        mergedData.push(newRow);
+      }
+    });
+  
+    this.tafTableData = mergedData; // Update the table data
   }
   
-  // parseTafData(rawText: string, icao: string): any[] {
-  //   const rows: any[] = [];
-  //   let serialNo = 1;
-  
-  //   // Split the raw text based on trend indicators
-  //   const lines = rawText.split(/BECMG|TEMPO/);
-  //   const generalInfo = lines.shift()?.trim() || ""; // General TAF info
-  //   const trendTypes = rawText.match(/BECMG|TEMPO/g) || [];
-  
-  //   // Match general TAF data
-  //   const genMatch = generalInfo.match(
-  //     /TAF (\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([\w\d]+) (\d{4}) ([\w ]+)?/
-  //   );
-  //   if (genMatch) {
-  //     rows.push({
-  //       "Sl no": serialNo++,
-  //       Type: "GEN",
-  //       "ICAO code": genMatch[1],
-  //       "Issue Time": genMatch[2],
-  //       "Valid From [TAF]": genMatch[3],
-  //       "Valid Until [TAF]": genMatch[4],
-  //       "Valid From [Type Specific]": "",
-  //       "Valid Until [Type Specific]": "",
-  //       "Wind Direction": genMatch[5],
-  //       "Wind Speed": genMatch[6],
-  //       Visibility: "",
-  //       "Weather Information": genMatch[7] || "",
-  //       "Cloud Information": "",
-  //       Trend: "",
-  //     });
-  //   }
-  
-  //   // Process trend data
-  //   lines.forEach((line, index) => {
-  //     const trendType = trendTypes[index] || "";
-  //     const trendMatch = line
-  //       .trim()
-  //       .match(/(\d{4})\/(\d{4}) ([\w\d]+) (\d{4}) ([\w ]+)?/);
-  
-  //     if (trendMatch) {
-  //       rows.push({
-  //         "Sl no": serialNo++,
-  //         Type: trendType,
-  //         "ICAO code": icao,
-  //         "Issue Time": "",
-  //         "Valid From [TAF]": "",
-  //         "Valid Until [TAF]": "",
-  //         "Valid From [Type Specific]": trendMatch[1],
-  //         "Valid Until [Type Specific]": trendMatch[2],
-  //         "Wind Direction": trendMatch[3],
-  //         "Wind Speed": trendMatch[4],
-  //         Visibility: trendMatch[5] || "",
-  //         "Weather Information": "",
-  //         "Cloud Information": "",
-  //         Trend: trendType,
-  //       });
-  //     }
-  //   });
-  
-  //   return rows;
-  // }
-
   parseTafData(rawText: string, icao: string): any[] {
     const rows: any[] = [];
     let serialNo = 1;
@@ -291,22 +241,31 @@ export class MapComponent implements OnInit {
   
     // Match general TAF data
     const genMatch = generalInfo.match(
-      /TAF (\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([\w\d]+) (\d{4}) ([\w ]+)?/
+      /TAF (\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([A-Z0-9]+) (\d{4})? ([\w ]+)?/
     );
   
-    // Add the general TAF information to rows
     if (genMatch) {
-      const wind = genMatch[5]; // Wind data (e.g., "36005KT")
-      const windDirection = wind.slice(0, 3);  // Wind direction (e.g., "360")
-      const windSpeed = wind.slice(3);  // Wind speed (e.g., "05KT")
+      const wind = genMatch[5];
+      const windDirection = wind.slice(0, 3);
+      const windSpeedMatch = wind.match(/(\d{2,3})(KT|MPS)/);
+      const windSpeed = windSpeedMatch ? `${windSpeedMatch[1]} ${windSpeedMatch[2]}` : "";
   
-      // If visibility (like "3000") is found, handle it separately
-      let visibility = "";
-      let weatherInfo = genMatch[7] || "";
+      let visibility = genMatch[6] || "";
+      if (/^\d{4}$/.test(visibility)) {
+        visibility = `${visibility}`;
+      }
   
-      if (genMatch[7] && /^\d{4}$/.test(genMatch[7])) {
-        visibility = genMatch[7];  // If it's a numeric value, treat it as visibility
-        weatherInfo = "HZ";  // Set weather info to HZ (haze)
+      let weatherInfo = "";
+      let cloudInfo = "";
+      const weatherAndCloudMatch = generalInfo.match(/(RA|HZ|TS|SN|MIFG|DZ|BR|SH|SQ|FZ|GR|SG|UP|VC|FU) ?/g) || [];
+      const cloudMatch = generalInfo.match(/(FEW|SCT|BKN|OVC)\d{3}/g) || [];
+  
+      if (weatherAndCloudMatch.length > 0) {
+        weatherInfo = weatherAndCloudMatch.join(" ").trim();
+      }
+  
+      if (cloudMatch.length > 0) {
+        cloudInfo = cloudMatch.join(", ");
       }
   
       rows.push({
@@ -322,7 +281,7 @@ export class MapComponent implements OnInit {
         "Wind Speed": windSpeed,
         Visibility: visibility,
         "Weather Information": weatherInfo,
-        "Cloud Information": "",
+        "Cloud Information": cloudInfo,
         Trend: "",
       });
     }
@@ -330,22 +289,21 @@ export class MapComponent implements OnInit {
     // Process trend data like BECMG, TEMPO
     lines.forEach((line, index) => {
       const trendType = trendTypes[index] || "";
-      const trendMatch = line.trim().match(/(\d{4})\/(\d{4}) ([\w\d]+) (\d{4}) ([\w ]+)?/);
+      
+      // Updated regex to make cloud info optional and capture trend data
+      const trendMatch = line.trim().match(
+        /(\d{4})\/(\d{4})\s*(VRB|\d{3})?(\d{2,3})?(KT|MPS)?\s*(\d{4})\s*(RA|HZ|TS|SN|MIFG|DZ|BR|SH|SQ|FZ|GR|SG|UP|VC|FU)?\s*(°C)?(\s*(FEW|SCT|BKN|OVC)\d{3})?/i
+      );
   
       if (trendMatch) {
-        // Parse the wind data (like "36005KT")
-        const wind = trendMatch[3];
-        const windDirection = wind.slice(0, 3);  // Wind direction (e.g., "360")
-        const windSpeed = wind.slice(3);  // Wind speed (e.g., "05KT")
-  
-        // If visibility (like "3000") is found, handle it
-        let visibility = "";
-        let weatherInfo = trendMatch[5] || "";
-  
-        if (trendMatch[5] && /^\d{4}$/.test(trendMatch[5])) {
-          visibility = trendMatch[5];  // If it's a numeric value, treat it as visibility
-          weatherInfo = "HZ";  // Set weather info to HZ (haze)
-        }
+        const validFrom = trendMatch[1];
+        const validUntil = trendMatch[2];
+        const windDirection = trendMatch[3] || "-"; 
+        const windSpeed = trendMatch[4] ? `${trendMatch[4]} ${trendMatch[5] || ''}` : "-"; 
+        const visibility = trendMatch[6] || "";
+        const weatherInfo = trendMatch[7] || "";
+        const temperature = trendMatch[8] || "";
+        const cloudInfo = trendMatch[9] ? trendMatch[9].trim() : ""; // Cloud info is now optional
   
         rows.push({
           "Sl no": serialNo++,
@@ -354,15 +312,19 @@ export class MapComponent implements OnInit {
           "Issue Time": "",
           "Valid From [TAF]": "",
           "Valid Until [TAF]": "",
-          "Valid From [Type Specific]": trendMatch[1],
-          "Valid Until [Type Specific]": trendMatch[2],
+          "Valid From [Type Specific]": validFrom,
+          "Valid Until [Type Specific]": validUntil,
           "Wind Direction": windDirection,
           "Wind Speed": windSpeed,
           Visibility: visibility,
           "Weather Information": weatherInfo,
-          "Cloud Information": "",
+          "Cloud Information": cloudInfo, // Cloud info is now optional and will be empty if not found
+          "Temperature": temperature, // Added temperature field
           Trend: trendType,
         });
+      } else {
+        // Log the problematic trend line for debugging
+        console.error(`Failed to parse trend line: ${line.trim()} for ICAO: ${icao}`);
       }
     });
   
