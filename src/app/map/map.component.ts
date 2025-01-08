@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
   styleUrls: ['./map.component.scss'],
 })
 export class MapComponent implements OnInit {
- 
+
   private markersSet = new Set<string>();
   private map: any;
   errorMessage: string = '';
@@ -133,7 +133,7 @@ export class MapComponent implements OnInit {
       this.markersLayer.addTo(this.map);
     });
   }
-  
+
   fetchTafData(): void {
     const currentLat = this.map.getCenter().lat;
     const currentLon = this.map.getCenter().lng;
@@ -192,7 +192,7 @@ export class MapComponent implements OnInit {
         const popupContent = `
           <b>Station Name:</b> ${stationName}<br>
           <b>Raw text:</b> ${raw_text} °C<br>
-         
+
         `;
 
         marker.bindPopup(popupContent).openPopup();
@@ -204,70 +204,70 @@ export class MapComponent implements OnInit {
     }
   }
 
- 
+
 
   processTafData(rawData: any[]): void {
     const newTableData: any[] = []; // Temporary array for new data
     rawData.forEach((station) => {
-      const rawText = station.raw_text; 
-      const icaoCode = station.icao; 
-      const parsedData = this.parseTafData(rawText, icaoCode); 
-      newTableData.push(...parsedData); 
+      const rawText = station.raw_text;
+      const icaoCode = station.icao;
+      const parsedData = this.parseTafData(rawText, icaoCode);
+      newTableData.push(...parsedData);
     });
-  
+
     // Merge the new data with existing table data, avoiding duplicates
     const existingIcaoCodes = this.tafTableData.map((item) => item["ICAO code"]);
     const mergedData = [...this.tafTableData];
-  
+
     newTableData.forEach((newRow) => {
       if (!existingIcaoCodes.includes(newRow["ICAO code"])) {
         mergedData.push(newRow);
       }
     });
-  
+
     this.tafTableData = mergedData; // Update the table data
   }
-  
+
   parseTafData(rawText: string, icao: string): any[] {
     const rows: any[] = [];
     let serialNo = 1;
-  
+
     // Split the raw text based on trend indicators like BECMG or TEMPO
     const trendTypes = rawText.match(/BECMG|TEMPO/g) || [];
     const lines = rawText.split(/BECMG|TEMPO/);
-  
+
     // Get the general information (first part before any trends)
     const generalInfo = lines.shift()?.trim() || "";
-  
+
     // Match general TAF data
     const genMatch = generalInfo.match(
-      /TAF (\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([A-Z0-9]+) (\d{4})? ([\w ]+)?/
-    );
-  
+ /^(\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([A-Z0-9]+) (\d{4})? ([\w ]+)?/) || generalInfo.match(
+   /TAF (\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([A-Z0-9]+) (\d{4})? ([\w ]+)?/);
+
     if (genMatch) {
       const wind = genMatch[5];
       const windDirection = wind.slice(0, 3);
       const windSpeedMatch = wind.match(/(\d{2,3})(KT|MPS)/);
       const windSpeed = windSpeedMatch ? `${windSpeedMatch[1]} ${windSpeedMatch[2]}` : "";
-  
+
       let visibility = genMatch[6] || "";
       if (/^\d{4}$/.test(visibility)) {
         visibility = `${visibility}`;
       }
-  
+
       let weatherInfo = "";
       let cloudInfo = "";
       const weatherAndCloudMatch = generalInfo.match(/(RA|HZ|TS|SN|MIFG|DZ|BR|SH|SQ|FZ|GR|SG|UP|VC|FU) ?/g) || [];
-      const cloudMatch = generalInfo.match(/(FEW|SCT|BKN|OVC)\d{3}/g) || [];
-  
+      const cloudMatch = generalInfo.match(/(FEW|SCT|BKN|OVC)\d{3}/g) || generalInfo.match(/(NSC)\d{0}/g) || [];
+
       if (weatherAndCloudMatch.length > 0) {
         weatherInfo = weatherAndCloudMatch.join(" ").trim();
       }
-  
+
       if (cloudMatch.length > 0) {
         cloudInfo = cloudMatch.join(", ");
       }
-  
+
       rows.push({
         "Sl no": serialNo++,
         Type: "GEN",
@@ -285,26 +285,26 @@ export class MapComponent implements OnInit {
         Trend: "",
       });
     }
-  
+
     // Process trend data like BECMG, TEMPO
     lines.forEach((line, index) => {
       const trendType = trendTypes[index] || "";
-      
+
       // Updated regex to make cloud info optional and capture trend data
       const trendMatch = line.trim().match(
         /(\d{4})\/(\d{4})\s*(VRB|\d{3})?(\d{2,3})?(KT|MPS)?\s*(\d{4})\s*(RA|HZ|TS|SN|MIFG|DZ|BR|SH|SQ|FZ|GR|SG|UP|VC|FU)?\s*(°C)?(\s*(FEW|SCT|BKN|OVC)\d{3})?/i
       );
-  
+
       if (trendMatch) {
         const validFrom = trendMatch[1];
         const validUntil = trendMatch[2];
-        const windDirection = trendMatch[3] || "-"; 
-        const windSpeed = trendMatch[4] ? `${trendMatch[4]} ${trendMatch[5] || ''}` : "-"; 
+        const windDirection = trendMatch[3] || "-";
+        const windSpeed = trendMatch[4] ? `${trendMatch[4]} ${trendMatch[5] || ''}` : "-";
         const visibility = trendMatch[6] || "";
         const weatherInfo = trendMatch[7] || "";
         const temperature = trendMatch[8] || "";
         const cloudInfo = trendMatch[9] ? trendMatch[9].trim() : ""; // Cloud info is now optional
-  
+
         rows.push({
           "Sl no": serialNo++,
           Type: trendType,
@@ -327,7 +327,7 @@ export class MapComponent implements OnInit {
         console.error(`Failed to parse trend line: ${line.trim()} for ICAO: ${icao}`);
       }
     });
-  
+
     return rows;
   }
 }
