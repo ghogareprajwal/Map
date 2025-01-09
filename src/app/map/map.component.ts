@@ -28,7 +28,7 @@ export class MapComponent implements OnInit {
   }
 
   private initializeMap(): void {
-    this.map = L.map('map').setView([20.5937, 78.9629], 5); // Default coordinates for India
+    this.map = L.map('map').setView([11.136111, 75.955], 10); // Default coordinates for India
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
     }).addTo(this.map);
@@ -228,6 +228,7 @@ export class MapComponent implements OnInit {
     this.tafTableData = mergedData; // Update the table data
   }
 
+
   parseTafData(rawText: string, icao: string): any[] {
     const rows: any[] = [];
     let serialNo = 1;
@@ -241,8 +242,10 @@ export class MapComponent implements OnInit {
 
     // Match general TAF data
     const genMatch = generalInfo.match(
- /^(\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([A-Z0-9]+) (\d{4})? ([\w ]+)?/) || generalInfo.match(
-   /TAF (\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([A-Z0-9]+) (\d{4})? ([\w ]+)?/);
+      /^(\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([A-Z0-9]+) (\d{4})? ([\w ]+)?/) || generalInfo.match(
+        /TAF (\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([A-Z0-9]+) (\d{4})? ([\w ]+)?/) || generalInfo.match(
+          /TAF COR (\w{4}) (\d{6}Z) (\d{4})\/(\d{4}) ([A-Z0-9]+) (\d{4})? ([\w ]+)?/
+        );
 
     if (genMatch) {
       const wind = genMatch[5];
@@ -257,7 +260,7 @@ export class MapComponent implements OnInit {
 
       let weatherInfo = "";
       let cloudInfo = "";
-      const weatherAndCloudMatch = generalInfo.match(/(RA|HZ|TS|SN|MIFG|DZ|BR|SH|SQ|FZ|GR|SG|UP|VC|FU) ?/g) || [];
+      const weatherAndCloudMatch = generalInfo.match(/(FG|RA|HZ|TS|SN|MIFG|DZ|BR|SH|SQ|FZ|GR|SG|UP|VC|FU) ?/g) || [];
       const cloudMatch = generalInfo.match(/(FEW|SCT|BKN|OVC)\d{3}/g) || generalInfo.match(/(NSC)\d{0}/g) || [];
 
       if (weatherAndCloudMatch.length > 0) {
@@ -288,22 +291,20 @@ export class MapComponent implements OnInit {
 
     // Process trend data like BECMG, TEMPO
     lines.forEach((line, index) => {
-      const trendType = trendTypes[index] || "";
+      const trendType = trendTypes[index] || "-";
 
-      // Updated regex to make cloud info optional and capture trend data
       const trendMatch = line.trim().match(
-        /(\d{4})\/(\d{4})\s*(VRB|\d{3})?(\d{2,3})?(KT|MPS)?\s*(\d{4})\s*(RA|HZ|TS|SN|MIFG|DZ|BR|SH|SQ|FZ|GR|SG|UP|VC|FU)?\s*(°C)?(\s*(FEW|SCT|BKN|OVC)\d{3})?/i
+        /(\d{3,4})\/(\d{3,4})\s*(?:(VRB|\d{3})\s*(\d{2,3})(KT|MPS))?\s*(\d{4}(?!KT))?\s*(FG|RA|HZ|TS|SN|MIFG|DZ|BR|SH|SQ|FZ|GR|SG|UP|VC|FU)?(\s*(FEW|SCT|BKN|OVC)\d{3}|NSC)?/i
       );
 
       if (trendMatch) {
-        const validFrom = trendMatch[1];
-        const validUntil = trendMatch[2];
+        const validFrom = trendMatch[1] || "-";
+        const validUntil = trendMatch[2] || "-";
         const windDirection = trendMatch[3] || "-";
-        const windSpeed = trendMatch[4] ? `${trendMatch[4]} ${trendMatch[5] || ''}` : "-";
-        const visibility = trendMatch[6] || "";
-        const weatherInfo = trendMatch[7] || "";
-        const temperature = trendMatch[8] || "";
-        const cloudInfo = trendMatch[9] ? trendMatch[9].trim() : ""; // Cloud info is now optional
+        const windSpeed = trendMatch[4] ? `${trendMatch[4]} ${trendMatch[5] || ""}` : "-";
+        const visibility = trendMatch[6] || "-";
+        const weatherInfo = trendMatch[7] || "-";
+        const cloudInfo = trendMatch[8] || "-";
 
         rows.push({
           "Sl no": serialNo++,
@@ -318,16 +319,14 @@ export class MapComponent implements OnInit {
           "Wind Speed": windSpeed,
           Visibility: visibility,
           "Weather Information": weatherInfo,
-          "Cloud Information": cloudInfo, // Cloud info is now optional and will be empty if not found
-          "Temperature": temperature, // Added temperature field
+          "Cloud Information": cloudInfo,
           Trend: trendType,
         });
+
       } else {
-        // Log the problematic trend line for debugging
         console.error(`Failed to parse trend line: ${line.trim()} for ICAO: ${icao}`);
       }
     });
-
     return rows;
   }
 }
