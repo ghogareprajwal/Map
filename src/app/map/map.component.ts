@@ -94,10 +94,6 @@ export class MapComponent implements OnInit {
     });
   }
 
-
-
-
-
   // Display METAR data markers on the map
   displayMetarDataOnMap(metarData: any): void {
     if (!metarData || !metarData.data || metarData.data.length === 0) {
@@ -140,53 +136,28 @@ export class MapComponent implements OnInit {
     });
   }
 
-  // processMetarData(rawData: any[]): void {
-  //   const newTableData: any[] = []; // Temporary array for new data
-
-  //   rawData.forEach((station) => {
-  //     const rawText = station.raw_text; // METAR report text
-  //     const icaoCode = station.icao; // ICAO code for the station
-  //     const parsedData = this.parseMetarData(rawText, icaoCode); // Parse the METAR data
-  //     newTableData.push(...parsedData); // Add parsed data to the newTableData
-  //   });
-
-  //   // Merge the new data with existing table data, avoiding duplicates
-  //   const existingIcaoCodes = this.metarTableData.map((item) => item["ICAO Code"]);
-  //   const mergedData = [...this.metarTableData]; // Copy the existing METAR table data
-
-  //   newTableData.forEach((newRow) => {
-  //     if (!existingIcaoCodes.includes(newRow["ICAO Code"])) {
-  //       mergedData.push(newRow); // Add new data if ICAO code does not exist
-  //     }
-  //   });
-
-  //   this.metarTableData = mergedData; // Update the table data
-  // }
-
-
-
   processMetarData(rawData: any[]): void {
     const newTableData: any[] = [];
 
     rawData.forEach((station) => {
-      const rawText = station.raw_text; // METAR report text
+      const rawText = station.raw_text;
 
       // Updated regex
       const regex = /^([A-Z]{4})\s(\d{6}Z)\s(\d{3})(\d{2})KT\s(\d+)\s?([A-Z]{2})?\s?((?:[A-Z]{3}\d{3}\s?|NSC)*)\s(\d{2})\/(\d{2})\s(Q\d{4})(?:\s([A-Z]+))?$/;
       const match = rawText.match(regex);
 
       if (match) {
-        const icaoCode = match[1]; // ICAO Code
-        const time = match[2]; // Time
-        const windDirection = match[3]; // Wind direction
-        const windSpeed = match[4]; // Wind speed
-        const visibility = match[5]; // Visibility
-        const weather = match[6] || '-'; // Optional Weather
-        const clouds = match[7] || '-'; // Clouds or NSC
-        const temperature = match[8]; // Temperature
-        const dewPoint = match[9]; // Dew Point
-        const pressure = match[10]; // Pressure
-        const remarks = match[11] || '-'; // Optional Remarks
+        const icaoCode = match[1];
+        const time = match[2];
+        const windDirection = match[3];
+        const windSpeed = match[4];
+        const visibility = match[5];
+        const weather = match[6] || '-';
+        const clouds = match[7] || '-';
+        const temperature = match[8];
+        const dewPoint = match[9];
+        const pressure = match[10];
+        const remarks = match[11] || '-';
 
         // Keep cloud values intact
         const cloudTypes = clouds.split(' ').map((cloud: string) => cloud.trim());
@@ -197,15 +168,15 @@ export class MapComponent implements OnInit {
           'Time': time,
           'Wind direction': windDirection,
           'Wind speed': windSpeed,
-          'Wind gust': '', // Add this if wind gust data is available
+          'Wind gust': '',
           'Visibility': visibility,
-          'RVR': '', // Add this if RVR is available
+          'RVR': '',
           'Weather': weather,
-          'Clouds': cloudTypes.join(' '), // List clouds as SCT012 or SCT020 SCT100
+          'Clouds': cloudTypes.join(' '),
           'Temperature': temperature,
           'Dew Point': dewPoint,
           'Pressure': pressure,
-          'Ceiling': '', // If ceiling data is available, parse it
+          'Ceiling': '',
           'Remarks': remarks,
         });
       }
@@ -214,15 +185,6 @@ export class MapComponent implements OnInit {
     // Set the parsed data to the table
     this.metarTableData = newTableData;
   }
-
-
-
-
-
-
-
-
-
 
 
   fetchTafData(): void {
@@ -295,9 +257,7 @@ export class MapComponent implements OnInit {
     }
   }
 
-
-
-  processTafData(rawData: any[]): void {
+ processTafData(rawData: any[]): void {
     const newTableData: any[] = []; // Temporary array for new data
     rawData.forEach((station) => {
       const rawText = station.raw_text;
