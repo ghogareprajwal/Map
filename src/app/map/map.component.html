@@ -11,7 +11,7 @@
   </div>
 
 
-  <div class="table-container" *ngIf="tafTableData.length > 0">
+  <!-- <div class="table-container" *ngIf="tafTableData.length > 0">
     <h3>TAF Data Table</h3>
     <table class="table table-striped table-bordered">
       <thead>
@@ -51,4 +51,49 @@
         </tr>
       </tbody>
     </table>
+</div> -->
+
+<div class="table-container" *ngIf="metarTableData.length > 0">
+  <h3>METAR Data Table</h3>
+  <table class="table table-striped table-bordered">
+    <thead>
+      <tr>
+        <th>Sl No</th>
+        <th>ICAO Code</th>
+        <th>Time</th>
+        <th>Wind Direction</th>
+        <th>Wind Speed</th>
+        <th>Wind Gust</th>
+        <th>Visibility</th>
+        <th>RVR</th>
+        <th>Weather</th>
+        <th>Clouds</th>
+        <th>Temperature</th>
+        <th>Dew Point</th>
+        <th>Pressure</th>
+        <th>Ceiling</th>
+        <th>Remarks</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of metarTableData">
+        <td>{{ row['Sl no'] }}</td>
+        <td>{{ row['ICAO Code'] }}</td>
+        <td>{{ row.Time }}</td>
+        <td>{{ row['Wind direction'] }}</td>
+        <td>{{ row['Wind speed'] }}</td>
+        <td>{{ row['Wind gust'] }}</td>
+        <td>{{ row.Visibility }}</td>
+        <td>{{ row.RVR }}</td>
+        <td>{{ row.Weather }}</td>
+        <td>{{ row.Clouds }}</td>
+        <td>{{ row.Temperature }}</td>
+        <td>{{ row['Dew Point'] }}</td>
+        <td>{{ row.Pressure }}</td>
+        <td>{{ row.Ceiling }}</td>
+        <td>{{ row.Remarks }}</td>
+      </tr>
+    </tbody>
+  </table>
 </div>
+

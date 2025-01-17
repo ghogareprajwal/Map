@@ -20,6 +20,7 @@ export class MapComponent implements OnInit {
   isMetarDataVisible: boolean = false;
   isTafDataVisible: boolean = false;
   tafTableData: any[] = [];
+  metarTableData: any[] = [];
 
   constructor(private weatherService: WeatherService) { }
 
@@ -82,6 +83,7 @@ export class MapComponent implements OnInit {
         if (data && data.data) {
           console.log('Fetched METAR data:', data);
           this.displayMetarDataOnMap(data);
+          this.processMetarData(data.data);
         } else {
           console.error('No METAR data received');
         }
@@ -91,6 +93,10 @@ export class MapComponent implements OnInit {
       },
     });
   }
+
+
+
+
 
   // Display METAR data markers on the map
   displayMetarDataOnMap(metarData: any): void {
@@ -133,6 +139,91 @@ export class MapComponent implements OnInit {
       this.markersLayer.addTo(this.map);
     });
   }
+
+  // processMetarData(rawData: any[]): void {
+  //   const newTableData: any[] = []; // Temporary array for new data
+
+  //   rawData.forEach((station) => {
+  //     const rawText = station.raw_text; // METAR report text
+  //     const icaoCode = station.icao; // ICAO code for the station
+  //     const parsedData = this.parseMetarData(rawText, icaoCode); // Parse the METAR data
+  //     newTableData.push(...parsedData); // Add parsed data to the newTableData
+  //   });
+
+  //   // Merge the new data with existing table data, avoiding duplicates
+  //   const existingIcaoCodes = this.metarTableData.map((item) => item["ICAO Code"]);
+  //   const mergedData = [...this.metarTableData]; // Copy the existing METAR table data
+
+  //   newTableData.forEach((newRow) => {
+  //     if (!existingIcaoCodes.includes(newRow["ICAO Code"])) {
+  //       mergedData.push(newRow); // Add new data if ICAO code does not exist
+  //     }
+  //   });
+
+  //   this.metarTableData = mergedData; // Update the table data
+  // }
+
+
+
+  processMetarData(rawData: any[]): void {
+    const newTableData: any[] = [];
+
+    rawData.forEach((station) => {
+      const rawText = station.raw_text; // METAR report text
+
+      // Updated regex
+      const regex = /^([A-Z]{4})\s(\d{6}Z)\s(\d{3})(\d{2})KT\s(\d+)\s?([A-Z]{2})?\s?((?:[A-Z]{3}\d{3}\s?|NSC)*)\s(\d{2})\/(\d{2})\s(Q\d{4})(?:\s([A-Z]+))?$/;
+      const match = rawText.match(regex);
+
+      if (match) {
+        const icaoCode = match[1]; // ICAO Code
+        const time = match[2]; // Time
+        const windDirection = match[3]; // Wind direction
+        const windSpeed = match[4]; // Wind speed
+        const visibility = match[5]; // Visibility
+        const weather = match[6] || '-'; // Optional Weather
+        const clouds = match[7] || '-'; // Clouds or NSC
+        const temperature = match[8]; // Temperature
+        const dewPoint = match[9]; // Dew Point
+        const pressure = match[10]; // Pressure
+        const remarks = match[11] || '-'; // Optional Remarks
+
+        // Keep cloud values intact
+        const cloudTypes = clouds.split(' ').map((cloud: string) => cloud.trim());
+
+        newTableData.push({
+          'Sl no': newTableData.length + 1,
+          'ICAO Code': icaoCode,
+          'Time': time,
+          'Wind direction': windDirection,
+          'Wind speed': windSpeed,
+          'Wind gust': '', // Add this if wind gust data is available
+          'Visibility': visibility,
+          'RVR': '', // Add this if RVR is available
+          'Weather': weather,
+          'Clouds': cloudTypes.join(' '), // List clouds as SCT012 or SCT020 SCT100
+          'Temperature': temperature,
+          'Dew Point': dewPoint,
+          'Pressure': pressure,
+          'Ceiling': '', // If ceiling data is available, parse it
+          'Remarks': remarks,
+        });
+      }
+    });
+
+    // Set the parsed data to the table
+    this.metarTableData = newTableData;
+  }
+
+
+
+
+
+
+
+
+
+
 
   fetchTafData(): void {
     const currentLat = this.map.getCenter().lat;
