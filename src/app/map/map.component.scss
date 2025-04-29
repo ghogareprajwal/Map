@@ -9,7 +9,7 @@
     cursor: pointer;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); /* Shadow effect */
   }
- 
+
   /* The dropdown content (hidden by default) */
   .dropdown-content {
     display: none;
@@ -22,13 +22,13 @@
     z-index: 1000;
     border-radius: 5px;
   }
- 
+
   /* Show the dropdown when the button is clicked */
   .dropdown-btn:hover + .dropdown-content,
   .dropdown-content:hover {
     display: block;
   }
- 
+
   /* Style for each button inside the dropdown */
   .dropdown-content button {
     background-color: white;
@@ -40,7 +40,7 @@
     cursor: pointer;
     border-radius: 5px;
   }
- 
+
   /* Hover effect for dropdown buttons */
   .dropdown-content button:hover {
     background-color: #f1f1f1;
@@ -49,8 +49,8 @@
     border-collapse: collapse;
     width: 100%;
   }
- 
- 
+
+
 
 
   th, td {
@@ -58,16 +58,21 @@
     text-align: left;
     border: 1px solid #ddd;
   }
-  
+
   th {
     background-color: #f2f2f2;
     font-weight: bold;
   }
-  
+
   tr:nth-child(even) {
     background-color: #f9f9f9;
   }
-  
+
   tr:hover {
     background-color: #ddd;
+  }
+
+  .wind-icon {
+    background: transparent;
+    border: none;
   }

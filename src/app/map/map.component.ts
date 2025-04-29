@@ -3,6 +3,7 @@ import * as L from 'leaflet';
 import { WeatherService } from '../weather.service';
 import { CommonModule } from '@angular/common';
 
+
 @Component({
   selector: 'app-map',
   standalone: true,
@@ -21,21 +22,28 @@ export class MapComponent implements OnInit {
   isTafDataVisible: boolean = false;
   tafTableData: any[] = [];
   metarTableData: any[] = [];
-
+  private windLayer = L.layerGroup();
+  private windMarkers: L.Marker[] = [];
   constructor(private weatherService: WeatherService) { }
 
   ngOnInit(): void {
     this.initializeMap();
+
   }
 
   private initializeMap(): void {
-    this.map = L.map('map').setView([11.136111, 75.955], 10); // Default coordinates for India
+    this.map = L.map('map').setView([22.9734, 78.6569], 5); // Default coordinates for India
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
     }).addTo(this.map);
 
+
+    // this.loadWindData();
+
+    // this.FeatchWindData();
     // Event listener for map view change (pan or zoom)
     this.map.on('moveend', () => {
+      // this.FeatchWindData();
       if (this.isMetarDataVisible) {
         this.fetchMetarData();
       }
@@ -44,7 +52,181 @@ export class MapComponent implements OnInit {
       }
     });
 
+    this.map.on('click', (e: any) => this.onMapClick(e));
+
   }
+
+  private onMapClick(e: any): void {
+    const lat = e.latlng.lat;
+    const lon = e.latlng.lng;
+    // Remove all previous wind markers
+    this.clearWindMarkers();
+
+    // Fetch wind data for the clicked location and add new wind markers
+    this.FeatchWindData(lat, lon);
+  }
+
+
+  private clearWindMarkers(): void {
+    // Remove all wind markers from the map and clear the array
+    this.windMarkers.forEach(marker => this.map.removeLayer(marker));
+    this.windMarkers = [];
+  }
+
+  private loadWindData(): void {
+    this.windLayer.clearLayers(); // Clear previous data
+    const currentLat = this.map.getCenter().lat;
+    const currentLon = this.map.getCenter().lng;
+
+    this.weatherService.getWindData(currentLat, currentLon).subscribe((response:any) => {
+      console.log('Wind data:', response);
+      const intervals = response.data.timelines[0].intervals;
+
+      intervals.forEach((interval:any) => {
+        const time = interval.startTime;
+        const windSpeed = interval.values.windSpeed;
+        const windDirection = interval.values.windDirection;
+
+        console.log(`Time: ${time}, Wind Speed: ${windSpeed} m/s, Wind Direction: ${windDirection}°`);
+
+        const customIcon = L.icon({
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+        });
+
+        // Create a marker and add it to the markers layer
+        const marker = L.marker([currentLat, currentLon], { icon: customIcon });
+        const popupContent = `
+         Wind Speed: ${windSpeed} m/s<br>Direction: ${windDirection}°
+        `;
+        marker.bindPopup(popupContent);
+        this.markersLayer.addLayer(marker); // Add to layer group
+        this.markersLayer.addTo(this.map);
+      });
+    });
+
+  }
+
+
+
+  private loadWindDataForVisibleMap(): void {
+    this.windLayer.clearLayers(); // Clear previous data
+    const currentLat = this.map.getCenter().lat;
+    const currentLon = this.map.getCenter().lng;
+        this.weatherService.getForecast(currentLat, currentLon).subscribe(data => {
+          console.log('Wind data:', data);
+          const values = data.timelines.hourly[0].values;
+          const windSpeed = values.windSpeed;
+          const windDirection = values.windDirection;
+
+          const customIcon = L.icon({
+            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+          });
+
+          // Create a marker and add it to the markers layer
+          const marker = L.marker([currentLat, currentLon], { icon: customIcon });
+          const popupContent = `
+           Wind Speed: ${windSpeed} m/s<br>Direction: ${windDirection}°
+          `;
+          marker.bindPopup(popupContent);
+          this.markersLayer.addLayer(marker); // Add to layer group
+          const windLayer = L.tileLayer('https://api.tomorrow.io/v4/map/tile/5/2/3/windSpeed/now.png?apikey=3lOulvRZVgNVIMNqlwUbZn6BTL1kuuVV', {
+            attribution: 'Map data © <a href="https://www.tomorrow.io">Tomorrow.io</a>',
+            tileSize: 256,
+            opacity: 0.8,
+          });
+
+          this.map.addLayer(windLayer);
+          this.markersLayer.addTo(this.map);
+
+        });
+
+
+      }
+
+
+
+      FeatchWindData(lat: number, lon: number): void {
+        this.weatherService.fetchWindData(lat, lon)
+          .subscribe({
+            next: (data: any) => {
+              console.log('Windy Forecast:', data);
+              this.addWindMarkers(data, lat, lon);
+            },
+            error: (error: any) => {
+              console.error('Error fetching Wind data:', error);
+            },
+          });
+      }
+
+      addWindMarkers(data: any, lat: number, lon: number): void {
+
+
+        // Assuming 'data' has different levels like surface, 800h, and 300h
+        const levels = ['surface', '800h', '300h'];
+
+        levels.forEach(level => {
+          const wind_u = data[`wind_u-${level}`];  // Wind component u (East-West)
+          const wind_v = data[`wind_v-${level}`];  // Wind component v (North-South)
+          const windGust = data[`windGust-${level}`] || [];  // Wind gust (optional)
+
+          // Ensure that wind_u and wind_v arrays are of the same length
+          if (wind_u && wind_v && wind_u.length === wind_v.length) {
+            wind_u.forEach((u: any, index: any) => {
+              const v = wind_v[index];
+              const gust = windGust[index] || 0;
+
+
+              const windSpeed = parseFloat((Math.sqrt(Math.pow(u, 2) + Math.pow(v, 2))).toFixed(2)); 
+              const windDirection = parseFloat(((Math.atan2(v, u) * (180 / Math.PI) + 180) % 360).toFixed(2));
+              console.log('winddirection',windDirection)
+              console.log('windSpeed',windSpeed)
+
+              const svgIcon = this.createWindIcon(windDirection);
+
+              const marker = L.marker([lat, lon], { icon: svgIcon }).addTo(this.map);
+              const popupContent = `
+                <strong>Wind Speed:</strong> ${windSpeed} m/s<br>
+                <strong>Wind Direction:</strong> ${windDirection}°
+              `;
+              marker.bindPopup(popupContent);
+
+              // Store the marker reference
+              this.windMarkers.push(marker);
+            });
+          }
+        });
+      }
+
+      createWindIcon( windDirection: number): L.DivIcon {
+
+
+        const svg = `
+          <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+            <g transform="rotate(${windDirection} 15 15)">
+              <!-- Arrow circle background -->
+              <circle cx="15" cy="15" r="12" fill="white" stroke="red" stroke-width="1.5"/>
+
+              <!-- Arrow shape (points into the wind) -->
+              <path d="M15 5 L20 15 L15 12 L10 15 Z" fill="red"/>
+
+
+            </g>
+          </svg>
+        `;
+
+        return L.divIcon({
+          html: svg,
+          className: 'wind-icon', // Important to prevent default markers
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+        });
+    }
 
   // Toggle for Astronomical Data
   toggleMetarData(): void {
